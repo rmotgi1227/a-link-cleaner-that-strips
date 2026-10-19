@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Link Cleaner</title>
+  <style>
+    :root {
+      --bg: #f5f7fa;
+      --card: #ffffff;
+      --ink: #1f2937;
+      --ink-2: #6b7280;
+      --line: #e5e7eb;
+      --accent: #4f46e5;
+      --accent-soft: #eef2ff;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.5;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    main {
+      flex: 1;
+      width: 100%;
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 2rem 1rem;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 1rem;
+      padding: 1.5rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    h1 { margin: 0 0 .5rem; font-size: 1.5rem; }
+    .lead { margin: 0 0 1.5rem; color: var(--ink-2); }
+    form { display: flex; flex-direction: column; gap: .75rem; }
+    label { font-size: .875rem; font-weight: 600; color: var(--ink-2); }
+    input[type="url"] {
+      width: 100%;
+      padding: .75rem 1rem;
+      font-size: 1rem;
+      border: 1px solid var(--line);
+      border-radius: .75rem;
+      background: var(--card);
+      color: var(--ink);
+      outline: none;
+    }
+    input[type="url"]:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+    button {
+      cursor: pointer;
+      padding: .75rem 1.25rem;
+      font-size: 1rem;
+      font-weight: 600;
+      border: none;
+      border-radius: .75rem;
+      background: var(--accent);
+      color: #fff;
+    }
+    button:hover { background: #4338ca; }
+    button:active { transform: translateY(1px); }
+    .result { margin-top: 1.5rem; display: none; word-break: break-all; }
+    .result.visible { display: block; }
+    .result-label { font-size: .875rem; font-weight: 600; color: var(--ink-2); margin-bottom: .25rem; }
+    .clean-url { color: var(--accent); text-decoration: none; font-weight: 500; }
+    .clean-url:hover { text-decoration: underline; }
+    .error {
+      margin-top: 1rem;
+      padding: .75rem 1rem;
+      background: #fef2f2;
+      color: #991b1b;
+      border: 1px solid #fecaca;
+      border-radius: .75rem;
+      display: none;
+    }
+    .error.visible { display: block; }
+    footer {
+      text-align: center;
+      padding: 1.5rem 1rem;
+      font-size: .875rem;
+      color: var(--ink-2);
+      border-top: 1px solid var(--line);
+    }
+    footer a { color: var(--ink-2); }
+    @media (min-width: 640px) {
+      main { padding: 4rem 1.5rem; }
+      .card { padding: 2rem; }
+      h1 { font-size: 2rem; }
+      form { flex-direction: row; align-items: flex-end; }
+      .field { flex: 1; }
+      button { white-space: nowrap; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="card">
+      <h1>Link Cleaner</h1>
+      <p class="lead">Paste a URL to remove tracking parameters like <code>utm_*</code>, <code>si=</code>, <code>fbclid</code>, and friends.</p>
+      <form id="cleaner-form" onsubmit="cleanLink(event)">
+        <div class="field">
+          <label for="url-input">URL</label>
+          <input id="url-input" type="url" placeholder="https://example.com?utm_source=email" required>
+        </div>
+        <button type="submit">Clean Link</button>
+      </form>
+      <div id="error" class="error" role="alert"></div>
+      <div id="result" class="result">
+        <div class="result-label">Cleaned URL</div>
+        <a id="clean-url" class="clean-url" href="#" target="_blank" rel="noopener noreferrer"></a>
+      </div>
+    </div>
+  </main>
+  <footer>Wished by Iampepeu, granted by Genie (open source) · report a bug → <a href="https://github.com/rmotgi1227/a-link-cleaner-that-strips/issues">https://github.com/rmotgi1227/a-link-cleaner-that-strips/issues</a></footer>
+  <script>
+    (function () {
+      var tracking = new Set(['si','fbclid','gclid','twclid','ttclid','igshid','yclid','dclid','msclkid','utm_source','utm_medium','utm_campaign','utm_term','utm_content','utm_id','utm_source_platform','utm_creative_format','utm_marketing_tactic','mc_cid','mc_eid','rb_clickid','ref','ref_src','spref','subscription_id','w','s','t','twcamp','twterm','twsource','sxs']);
+      function clean(raw) {
+        var url = new URL(raw);
+        Array.from(url.searchParams.keys()).forEach(function(k) {
+          if (tracking.has(k) || k.indexOf('utm_') === 0) url.searchParams.delete(k);
+        });
+        return url.toString();
+      }
+      window.cleanLink = function (e) {
+        e.preventDefault();
+        var err = document.getElementById('error');
+        err.textContent = '';
+        err.classList.remove('visible');
+        var input = document.getElementById('url-input');
+        var val = input.value.trim();
+        if (!val) return;
+        try {
+          var out = clean(val);
+          var link = document.getElementById('clean-url');
+          link.href = out;
+          link.textContent = out;
+          document.getElementById('result').classList.add('visible');
+        } catch (x) {
+          err.textContent = 'Please paste a valid URL.';
+          err.classList.add('visible');
+          document.getElementById('result').classList.remove('visible');
+        }
+      };
+    })();
+  </script>
+</body>
+</html>
